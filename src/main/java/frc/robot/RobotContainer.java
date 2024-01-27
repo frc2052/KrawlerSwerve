@@ -7,6 +7,7 @@ package frc.robot;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import frc.robot.commands.DriveCommand;
 import frc.robot.subsystems.DrivetrainSubsystem;
@@ -51,7 +52,11 @@ public class RobotContainer {
     zeroGyroButton.onTrue(new InstantCommand(() -> drivetrain.zeroGyro(), drivetrain));
 
     JoystickButton driveModeToggleButton = new JoystickButton(steerJoystick, 5);
-    driveModeToggleButton.onTrue(new InstantCommand( () -> fieldCentric = !fieldCentric));
+    ParallelCommandGroup driveModeToggleCommandGroup = new ParallelCommandGroup(
+      new InstantCommand( () -> fieldCentric = !fieldCentric), 
+      new InstantCommand( () -> {if(fieldCentric){System.out.println("FIELD CENTRIC");} else {System.out.println("ROBOT CENTRIC");}})
+    );
+    driveModeToggleButton.onTrue(driveModeToggleCommandGroup);
   }
 
   /**

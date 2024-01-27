@@ -96,6 +96,7 @@ public class DrivetrainSubsystem extends SubsystemBase {
     @Override
     public void periodic() {
         odometry.update(getRotation(), getModulePositions());
+        debug();
     }
 
     /**
@@ -228,5 +229,12 @@ public class DrivetrainSubsystem extends SubsystemBase {
         // );
 
         return 6 * Math.PI;
+    }
+
+    public void debug() {
+        frontLeftModule.debug();
+        frontRightModule.debug();   
+        backLeftModule.debug();
+        backRightModule.debug();
     }
 }
