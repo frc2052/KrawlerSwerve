@@ -1,8 +1,10 @@
 package com.team2052.swervemodule;
 
+import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
 import com.ctre.phoenix6.hardware.CANcoder;
 import com.ctre.phoenix6.signals.AbsoluteSensorRangeValue;
+import com.ctre.phoenix6.signals.SensorDirectionValue;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.REVLibError;
 import com.revrobotics.RelativeEncoder;
@@ -14,6 +16,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 public class SwerveModule {
    private final CANSparkMax driveMotor;
@@ -35,8 +38,9 @@ public class SwerveModule {
          * CANCoder Initialization
          */
         CANcoderConfiguration canCoderConfiguration = new CANcoderConfiguration();
-        canCoderConfiguration.MagnetSensor.AbsoluteSensorRange = AbsoluteSensorRangeValue.Signed_PlusMinusHalf;
-        canCoderConfiguration.MagnetSensor.MagnetOffset = -steerOffset.getRotations();
+        canCoderConfiguration.MagnetSensor.AbsoluteSensorRange = AbsoluteSensorRangeValue.Unsigned_0To1;
+        canCoderConfiguration.MagnetSensor.MagnetOffset = (steerOffset.getRadians() / (2 * Math.PI));
+        canCoderConfiguration.MagnetSensor.SensorDirection = SensorDirectionValue.Clockwise_Positive;
 
         canCoder = new CANcoder(canCoderChannel);
         
@@ -69,7 +73,7 @@ public class SwerveModule {
         driveMotor.setIdleMode(CANSparkMax.IdleMode.kBrake)
     );
 
-    driveMotor.setInverted(SwerveConstants.NeoSwerveModule.DRIVE_INVERTED);
+    driveMotor.setInverted(SwerveConstants.SwerveModule.DRIVE_INVERTED);
 
     checkError(
         "Failed to enable drive motor voltage compensation",
@@ -88,8 +92,8 @@ public class SwerveModule {
     RelativeEncoder driveEncoder = driveMotor.getEncoder();
 
     // Conversion factor for switching between ticks and meters in terms of meters per tick
-    double drivePositionConversionFactor = Math.PI * SwerveConstants.NeoSwerveModule.WHEEL_DIAMETER_METERS * 
-        SwerveConstants.NeoSwerveModule.DRIVE_REDUCTION;
+    double drivePositionConversionFactor = Math.PI * SwerveConstants.SwerveModule.WHEEL_DIAMETER_METERS * 
+        SwerveConstants.SwerveModule.DRIVE_REDUCTION;
     
     checkError(
         "Failed to set drive motor encoder conversion factors",
@@ -118,7 +122,7 @@ public class SwerveModule {
         steerMotor.setIdleMode(CANSparkMax.IdleMode.kBrake)
     );
 
-    steerMotor.setInverted(SwerveConstants.NeoSwerveModule.STEER_INVERTED);
+    steerMotor.setInverted(SwerveConstants.SwerveModule.STEER_INVERTED);
 
     checkError(
         "Failed to enable steer motor voltage compensation",
@@ -133,28 +137,28 @@ public class SwerveModule {
     // Drive Motor encoder initialization
     RelativeEncoder steerEncoder = steerMotor.getEncoder();
 
-    // Conversion factor for switching between ticks and meters in terms of meters per tick
-        double steerPositionConversionFactor = 2.0 * Math.PI * SwerveConstants.NeoSwerveModule.STEER_REDUCTION;
+    // Conversion factor for switching between ticks and radians in terms of radians per tick
+    double steerPositionConversionFactor = 2.0 * Math.PI * SwerveConstants.SwerveModule.STEER_REDUCTION;
     
     checkError(
         "Failed to set drive motor encoder conversion factors",
-        // Set the position conversion factor so the encoder will automatically convert ticks to meters
+        // Set the position conversion factor so the encoder will automatically convert ticks to radians
         steerEncoder.setPositionConversionFactor(steerPositionConversionFactor),
-        // Velocity of the encoder in meters per second
+        // Velocity of the encoder in radians per second
         steerEncoder.setVelocityConversionFactor(steerPositionConversionFactor / 60.0)
     );
 
     checkError(
         "Failed to set steer motor encoder position",
-        steerEncoder.setPosition(Math.toRadians(canCoder.getAbsolutePosition().getValueAsDouble()))
+        steerEncoder.setPosition(canCoder.getPosition().getValueAsDouble() * (2 * Math.PI))
     );
 
     SparkPIDController steerController = steerMotor.getPIDController();
     checkError(
         "Failed to configure steer motor PID",
-        steerController.setP(SwerveConstants.NeoSwerveModule.STEER_MOTOR_P),
-        steerController.setI(SwerveConstants.NeoSwerveModule.STEER_MOTOR_I),
-        steerController.setD(SwerveConstants.NeoSwerveModule.STEER_MOTOR_D),
+        steerController.setP(SwerveConstants.SwerveModule.STEER_MOTOR_P),
+        steerController.setI(SwerveConstants.SwerveModule.STEER_MOTOR_I),
+        steerController.setD(SwerveConstants.SwerveModule.STEER_MOTOR_D),
         steerController.setPositionPIDWrappingMinInput(-Math.PI),
         steerController.setPositionPIDWrappingMaxInput(Math.PI),
         steerController.setPositionPIDWrappingEnabled(true)
@@ -193,6 +197,8 @@ public class SwerveModule {
         steerMotor.getPIDController().setReference(
             desiredState.angle.getRadians(), CANSparkMax.ControlType.kPosition
         );
+
+        SmartDashboard.putNumber(debugName + ": Desired Rotation", steerAngle.getDegrees());
     }
 
     public SwerveModulePosition getPosition() {
@@ -210,14 +216,20 @@ public class SwerveModule {
          * [Motor free speed (RPM)] / 60 * [Drive reduction] * [Wheel diameter (m)] * pi
          * This is a measure of how fast the robot should be able to drive in a straight line.
          */
-        return SwerveConstants.NeoSwerveModule.NEO_ROUNDS_PER_MINUTE / 60 * SwerveConstants.NeoSwerveModule.DRIVE_REDUCTION * 
-            SwerveConstants.NeoSwerveModule.WHEEL_DIAMETER_METERS * Math.PI;
+        return SwerveConstants.SwerveModule.NEO_ROUNDS_PER_MINUTE / 60 * SwerveConstants.SwerveModule.DRIVE_REDUCTION * 
+            SwerveConstants.SwerveModule.WHEEL_DIAMETER_METERS * Math.PI;
+    }
+
+    public void debug() {
+        SmartDashboard.putNumber(debugName + " Absolute CANcoder Degrees", canCoder.getAbsolutePosition().getValueAsDouble() * 360);
+        SmartDashboard.putNumber(debugName + " Current CANcoder Degrees", canCoder.getPosition().getValueAsDouble() * 360);
+        SmartDashboard.putNumber(debugName + " Current Steer Encoder Degrees", Math.toDegrees(steerMotor.getEncoder().getPosition()));
     }
 
     @SuppressWarnings("unchecked")
     protected <E> void checkError(String message, E... errors) {
         for (E error : errors) {
-            if (error != REVLibError.kOk) {
+            if (error != REVLibError.kOk && error != StatusCode.OK) {
                 DriverStation.reportError(
                     message + " on [" + debugName + "] module: " + error.toString(),
                     false
