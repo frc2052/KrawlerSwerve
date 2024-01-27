@@ -6,6 +6,8 @@ package frc.robot;
 
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.button.JoystickButton;
 import frc.robot.commands.DriveCommand;
 import frc.robot.subsystems.DrivetrainSubsystem;
 
@@ -20,6 +22,7 @@ public class RobotContainer {
   private final DrivetrainSubsystem drivetrain;
   private final Joystick driveJoystick;
   private final Joystick steerJoystick;
+  private boolean fieldCentric;
 
   public RobotContainer() {
     driveJoystick = new Joystick(0);
@@ -35,7 +38,7 @@ public class RobotContainer {
           driveJoystick::getX,
           // Rotation velocity supplier.
           steerJoystick::getX,
-          () -> false,
+          () -> fieldCentric,
           drivetrain
       )
     );
@@ -44,7 +47,11 @@ public class RobotContainer {
   }
 
   private void configureBindings() {
+    JoystickButton zeroGyroButton = new JoystickButton(steerJoystick, 2);
+    zeroGyroButton.onTrue(new InstantCommand(() -> drivetrain.zeroGyro(), drivetrain));
 
+    JoystickButton driveModeToggleButton = new JoystickButton(steerJoystick, 5);
+    driveModeToggleButton.onTrue(new InstantCommand( () -> fieldCentric = !fieldCentric));
   }
 
   /**
