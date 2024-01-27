@@ -1,1 +1,1 @@
-Swerve with Neo motors and CANcoders
+Swerve with REV Neo Brushless motors, CANcoders, and NavX.
