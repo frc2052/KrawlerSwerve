@@ -150,7 +150,7 @@ public class SwerveModule {
 
     checkError(
         "Failed to set steer motor encoder position",
-        steerEncoder.setPosition(canCoder.getPosition().getValueAsDouble() * (2 * Math.PI))
+        steerEncoder.setPosition(canCoder.getAbsolutePosition().getValueAsDouble() * (2 * Math.PI))
     );
 
     SparkPIDController steerController = steerMotor.getPIDController();
